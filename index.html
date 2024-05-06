@@ -7331,8 +7331,7 @@ a.anchor-link {
     if (!diagrams.length) {
       return;
     }
-    const mermaid = (await import("https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.6.0/mermaid.esm.min.mjs")).default;
-    const parser = new DOMParser();
+    const mermaid = (await import("https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.2.3/mermaid.esm.min.mjs")).default;
 
     mermaid.initialize({
       maxTextSize: 100000,
@@ -7348,52 +7347,39 @@ a.anchor-link {
     let _nextMermaidId = 0;
 
     function makeMermaidImage(svg) {
-      const img = document.createElement("img");
-      const doc = parser.parseFromString(svg, "image/svg+xml");
-      const svgEl = doc.querySelector("svg");
-      const { maxWidth } = svgEl?.style || {};
-      const firstTitle = doc.querySelector("title");
-      const firstDesc = doc.querySelector("desc");
-
-      img.setAttribute("src", `data:image/svg+xml,${encodeURIComponent(svg)}`);
-      if (maxWidth) {
-        img.width = parseInt(maxWidth);
+      const img = document.createElement('img');
+      const maxWidth = svg.match(/max-width: (\d+)/);
+      if (maxWidth && maxWidth[1]) {
+        const width = parseInt(maxWidth[1]);
+        if (width && !Number.isNaN(width) && Number.isFinite(width)) {
+          img.width = width;
+        }
       }
-      if (firstTitle) {
-        img.setAttribute("alt", firstTitle.textContent);
-      }
-      if (firstDesc) {
-        const caption = document.createElement("figcaption");
-        caption.className = "sr-only";
-        caption.textContent = firstDesc.textContent;
-        return [img, caption];
-      }
-      return [img];
+      img.setAttribute('src', `data:image/svg+xml,${encodeURIComponent(svg)}`);
+      return img;
     }
 
     async function makeMermaidError(text) {
-      let errorMessage = "";
+      let errorMessage = '';
       try {
         await mermaid.parse(text);
       } catch (err) {
         errorMessage = `${err}`;
       }
 
-      const result = document.createElement("details");
-      result.className = 'jp-RenderedMermaid-Details';
-      const summary = document.createElement("summary");
-      summary.className = 'jp-RenderedMermaid-Summary';
-      const pre = document.createElement("pre");
-      const code = document.createElement("code");
+      const result = document.createElement('details');
+      const summary = document.createElement('summary');
+      const pre = document.createElement('pre');
+      const code = document.createElement('code');
       code.innerText = text;
       pre.appendChild(code);
       summary.appendChild(pre);
       result.appendChild(summary);
 
-      const warning = document.createElement("pre");
+      const warning = document.createElement('pre');
       warning.innerText = errorMessage;
       result.appendChild(warning);
-      return [result];
+      return result;
     }
 
     async function renderOneMarmaid(src) {
@@ -7403,41 +7389,30 @@ a.anchor-link {
       const el = document.createElement("div");
       el.style.visibility = "hidden";
       document.body.appendChild(el);
-      let results = null;
-      let output = null;
+      let result = null;
       try {
         const { svg } = await mermaid.render(id, raw, el);
-        results = makeMermaidImage(svg);
-        output = document.createElement("figure");
-        results.map(output.appendChild, output);
+        result = makeMermaidImage(svg);
       } catch (err) {
         parent.classList.add("jp-mod-warning");
-        results = await makeMermaidError(raw);
-        output = results[0];
+        result = await makeMermaidError(raw);
       } finally {
         el.remove();
       }
       parent.classList.add("jp-RenderedMermaid");
-      parent.appendChild(output);
+      parent.appendChild(result);
     }
 
     void Promise.all([...diagrams].map(renderOneMarmaid));
   });
 </script>
 <style>
-  .jp-Mermaid:not(.jp-RenderedMermaid) {
+  .jp-RenderedMarkdown .jp-Mermaid:not(.jp-RenderedMermaid) {
     display: none;
   }
-
-  .jp-RenderedMermaid {
-    overflow: auto;
-    display: flex;
-  }
-
-  .jp-RenderedMermaid.jp-mod-warning {
+  .jp-RenderedMarkdown .jp-RenderedMermaid.jp-mod-warning {
     width: auto;
-    padding: 0.5em;
-    margin-top: 0.5em;
+    padding: 10px;
     border: var(--jp-border-width) solid var(--jp-warn-color2);
     border-radius: var(--jp-border-radius);
     color: var(--jp-ui-font-color1);
@@ -7445,32 +7420,17 @@ a.anchor-link {
     white-space: pre-wrap;
     word-wrap: break-word;
   }
-
-  .jp-RenderedMermaid figure {
-    margin: 0;
-    overflow: auto;
-    max-width: 100%;
-  }
-
-  .jp-RenderedMermaid img {
-    max-width: 100%;
-  }
-
-  .jp-RenderedMermaid-Details > pre {
+  .jp-RenderedMarkdown .jp-RenderedMermaid.jp-mod-warning details > pre {
     margin-top: 1em;
   }
-
-  .jp-RenderedMermaid-Summary {
+  .jp-RenderedMarkdown .jp-RenderedMermaid.jp-mod-warning summary {
     color: var(--jp-warn-color2);
   }
-
-  .jp-RenderedMermaid:not(.jp-mod-warning) pre {
-    display: none;
-  }
-
-  .jp-RenderedMermaid-Summary > pre {
+  .jp-RenderedMarkdown .jp-RenderedMermaid.jp-mod-warning summary > pre {
     display: inline-block;
-    white-space: normal;
+  }
+  .jp-RenderedMermaid > .mermaid {
+    display: none;
   }
 </style>
 <!-- End of mermaid configuration --></head>
@@ -7755,9 +7715,10 @@ a.anchor-link {
 <div class="cm-editor cm-s-jupyter">
 <div class="highlight hl-ipython3"><pre><span></span><span class="kn">import</span> <span class="nn">os</span>
 
-<span class="n">linkFromGit</span><span class="o">=</span><span class="s1">'https://github.com/CienciaDeDatosEspacial/appending/raw/main/Fragility.csv'</span>
+<span class="n">linkFromGit</span><span class="o">=</span><span class="s1">'https://github.com/CienciaDeDatosEspacial/reshaping/raw/main/Fragility_cleaner.csv'</span>
 <span class="c1">#read in:</span>
-<span class="n">FragilityAll</span><span class="o">=</span><span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">linkFromGit</span><span class="p">)</span>
+<span class="n">FragilityAll</span><span class="o">=</span><span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">linkFromGit</span><span class="p">,</span><span class="n">index_col</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
 
 <span class="c1">#subset</span>
 <span class="n">fragile2019</span><span class="o">=</span><span class="n">FragilityAll</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">FragilityAll</span><span class="o">.</span><span class="n">Year</span><span class="o">==</span><span class="mi">2019</span><span class="p">,:</span><span class="s2">"Total"</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
@@ -7902,7 +7863,7 @@ a.anchor-link {
 <div class="cm-editor cm-s-jupyter">
 <div class="highlight hl-ipython3"><pre><span></span><span class="n">changesCIA1</span><span class="o">=</span><span class="p">{</span><span class="n">c</span><span class="p">:</span><span class="n">fz</span><span class="o">.</span><span class="n">extractOne</span><span class="p">(</span><span class="n">c</span><span class="p">,</span> <span class="n">OnlyFragile</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> 
                  <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">OnlyCia</span><span class="p">)</span>
-                 <span class="k">if</span> <span class="n">fz</span><span class="o">.</span><span class="n">extractOne</span><span class="p">(</span><span class="n">c</span><span class="p">,</span> <span class="n">OnlyFragile</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&gt;=</span><span class="mi">86</span><span class="p">}</span>
+                 <span class="k">if</span> <span class="n">fz</span><span class="o">.</span><span class="n">extractOne</span><span class="p">(</span><span class="n">c</span><span class="p">,</span> <span class="n">OnlyFragile</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&gt;</span><span class="mi">86</span><span class="p">}</span>
 <span class="c1">#dict of matches</span>
 <span class="n">changesCIA1</span>
 </pre></div>
@@ -7986,11 +7947,44 @@ a.anchor-link {
 <div class="jp-InputPrompt jp-InputArea-prompt">In [ ]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
+<div class="highlight hl-ipython3"><pre><span></span><span class="n">troublesome</span><span class="o">=</span><span class="p">{</span><span class="s1">'CONGO REPUBLIC'</span><span class="p">:</span><span class="s1">'CONGO, REPUBLIC OF THE'</span><span class="p">,}</span>
+
+<span class="n">fragile2019</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">to_replace</span><span class="o">=</span><span class="p">{</span><span class="s1">'Country'</span><span class="p">:</span><span class="n">troublesome</span><span class="p">},</span><span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea">
+<div class="jp-InputPrompt jp-InputArea-prompt">In [ ]:</div>
+<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+<div class="cm-editor cm-s-jupyter">
+<div class="highlight hl-ipython3"><pre><span></span><span class="c1"># third try</span>
+<span class="n">OnlyCia</span><span class="o">=</span><span class="nb">set</span><span class="p">(</span><span class="n">cia</span><span class="o">.</span><span class="n">Country</span><span class="p">)</span><span class="o">-</span><span class="nb">set</span><span class="p">(</span><span class="n">fragile2019</span><span class="o">.</span><span class="n">Country</span><span class="p">)</span>
+<span class="n">OnlyFragile</span><span class="o">=</span><span class="nb">set</span><span class="p">(</span><span class="n">fragile2019</span><span class="o">.</span><span class="n">Country</span><span class="p">)</span><span class="o">-</span><span class="nb">set</span><span class="p">(</span><span class="n">cia</span><span class="o">.</span><span class="n">Country</span><span class="p">)</span>
+<span class="p">[(</span><span class="n">f</span><span class="p">,</span><span class="n">fz</span><span class="o">.</span><span class="n">extractOne</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">OnlyCia</span><span class="p">))</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">OnlyFragile</span><span class="p">)]</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea">
+<div class="jp-InputPrompt jp-InputArea-prompt">In [ ]:</div>
+<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+<div class="cm-editor cm-s-jupyter">
 <div class="highlight hl-ipython3"><pre><span></span><span class="c1"># second dict of changes</span>
 <span class="c1"># select a different threshold</span>
 <span class="n">changesFragile1</span><span class="o">=</span><span class="p">{</span><span class="n">f</span><span class="p">:</span><span class="n">fz</span><span class="o">.</span><span class="n">extractOne</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">OnlyCia</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> 
                  <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">OnlyFragile</span><span class="p">)</span>
-                 <span class="k">if</span> <span class="mi">68</span><span class="o">&lt;=</span><span class="n">fz</span><span class="o">.</span><span class="n">extractOne</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">OnlyCia</span><span class="p">)[</span><span class="mi">1</span><span class="p">]}</span>
+                 <span class="k">if</span> <span class="n">fz</span><span class="o">.</span><span class="n">extractOne</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">OnlyCia</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span> <span class="ow">in</span><span class="p">([</span><span class="mi">80</span><span class="p">,</span><span class="mi">64</span><span class="p">,</span><span class="mi">54</span><span class="p">,</span><span class="mi">74</span><span class="p">])}</span>
 
 <span class="c1">#dict of matches</span>
 <span class="n">changesFragile1</span>
@@ -8022,7 +8016,7 @@ a.anchor-link {
 <div class="jp-InputPrompt jp-InputArea-prompt">In [ ]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-ipython3"><pre><span></span><span class="c1"># third try</span>
+<div class="highlight hl-ipython3"><pre><span></span><span class="c1"># next try</span>
 <span class="n">OnlyCia</span><span class="o">=</span><span class="nb">set</span><span class="p">(</span><span class="n">cia</span><span class="o">.</span><span class="n">Country</span><span class="p">)</span><span class="o">-</span><span class="nb">set</span><span class="p">(</span><span class="n">fragile2019</span><span class="o">.</span><span class="n">Country</span><span class="p">)</span>
 <span class="n">OnlyFragile</span><span class="o">=</span><span class="nb">set</span><span class="p">(</span><span class="n">fragile2019</span><span class="o">.</span><span class="n">Country</span><span class="p">)</span><span class="o">-</span><span class="nb">set</span><span class="p">(</span><span class="n">cia</span><span class="o">.</span><span class="n">Country</span><span class="p">)</span>
 <span class="p">[(</span><span class="n">f</span><span class="p">,</span><span class="n">fz</span><span class="o">.</span><span class="n">extractOne</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">OnlyCia</span><span class="p">))</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">OnlyFragile</span><span class="p">)]</span>
@@ -8264,7 +8258,7 @@ a.anchor-link {
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
 <div class="highlight hl-ipython3"><pre><span></span><span class="c1"># remember you can use this for a particular case:</span>
-<span class="n">isoCodes</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">isoCodes</span><span class="o">.</span><span class="n">Countryname</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">contains</span><span class="p">(</span><span class="s1">'LAO'</span><span class="p">)]</span>
+<span class="n">isoCodes</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">isoCodes</span><span class="o">.</span><span class="n">Countryname</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">contains</span><span class="p">(</span><span class="s1">'LAO|KOREA|CONGO|GAZA'</span><span class="p">)]</span>
 </pre></div>
 </div>
 </div>
